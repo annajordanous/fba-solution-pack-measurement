@@ -1,0 +1,40 @@
+<?php
+
+include_once drupal_get_path('module', 'fba_solution_pack_uploadCSV') . '/uploadCSV.inc';
+/**
+ * @file
+ * Module for importing objects from cds/isis xml file.
+ *
+ * @author simonfox
+ * @author annajordanous
+ */
+
+/**
+ * Provide definitions for menu callbacks.
+ *
+ * @return array
+ *   Callback definitions
+ */
+function fba_solution_pack_uploadCSV_menu() {
+  $items = array();
+
+  $items['fba/uploadCSV'] = array(
+    'title' => 'Upload CSV file and check validity',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('fba_solution_pack_uploadCSV'),
+    'access arguments' => array('access fba_solution_pack_uploadCSV content'),
+    'type' => MENU_CALLBACK,
+  );
+
+  return $items;
+}
+
+/**
+ * Valid permissions for this module.
+ *
+ * @return array
+ *   An array of valid permissions for the relationship_reference module
+ */
+function fba_solution_pack_uploadCSV_perm() {
+  return array('access fba_solution_pack_uploadCSV content');
+}
