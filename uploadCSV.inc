@@ -281,6 +281,51 @@ echo "<br /><br /><b>Units:</b> ";
 print_r($units);
 echo "<br /><br /><b>Data Array:</b> ";
 print_r($data_array);
+	/** to be returned: 
+	<?xml version="1.0"?>
+	<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+	xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#" 
+	xmlns:relsext="info:fedora/fedora-system:def/relations-external#" 
+	xmlns:altrelsext="http://www.fedora.info/definitions/1/0/fedora-relsext-ontology.rdfs#"
+	xmlns:dc="http://purl.org/dc/elements/1.1/" 
+	xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/" 
+	xmlns:fedora-model="info:fedora/fedora-system:def/model#"
+	xmlns:dtc="http://www.dtcarchive.org/ontology#">
+
+	<rdf:Description rdf:about="info:fedora/dtc:123">
+		<relsext:hasConstituent rdf:parseType="Resource">
+			<dc:identifier>1</dc:identifier>
+
+			<relsext:HasDescription>Year</relsext:HasDescription>
+			<dtc:containsDataOnVocabTerm rdf:resource="info:fedora/dtc-vocab:1111-1"/>    
+			<dtc:hasPreferredUnits>N/A</dtc:hasPreferredUnits>
+
+			<relsext:hasSubset>
+				<rdf:Seq>
+					<rdf:li>2007</rdf:li>
+					<rdf:li>2008</rdf:li>
+					<rdf:li>2009</rdf:li>
+					<rdf:li>2010</rdf:li>
+				</rdf:Seq>
+			</relsext:hasSubset>
+		</relsext:hasConstituent>
+	
+	</rdf:Description>
+
+	</rdf:RDF>
+	*/
+	$returnedRDF = '<?xml version="1.0"?>\n
+	<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"\n
+	xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#" \n
+	xmlns:relsext="info:fedora/fedora-system:def/relations-external#" \n
+	xmlns:altrelsext="http://www.fedora.info/definitions/1/0/fedora-relsext-ontology.rdfs#"\n
+	xmlns:dc="http://purl.org/dc/elements/1.1/" \n
+	xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/" \n
+	xmlns:fedora-model="info:fedora/fedora-system:def/model#"\n
+	xmlns:dtc="http://www.dtcarchive.org/ontology#">\n\n
+
+	<rdf:Description rdf:about="';
+	
 }
 
 /**
