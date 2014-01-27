@@ -39,74 +39,10 @@ function fba_solution_pack_uploadCSV(&$form_state = array()) {
 function fba_solution_pack_uploadCSV_submit($form, &$form_state) {
 
     if (!$form_state['form_has_errors']) {
-/*
-	//Query to return vocab PID and labels:
-	$query = 'SELECT DISTINCT ?s ?p ?label WHERE {
-		?s ?p ?label .
-		?s <info:fedora/fedora-system:def/relations-external#isMemberOfCollection>
-			<info:fedora/vocab:collection> .
-		FILTER (regex(str(?s), "info:fedora/vocab") &&
-			regex(str(?p), "info:fedora/fedora-system:def/model#label"))
-		}';
-//echo "SPARQL query: $query<br />";
-
-    	$result = uploadCSV_risearch($query, 'TRIPLE');
-    	$sxl_result = simplexml_load_string($result);
-
-//print_r("SXL_result:".$sxl_result."<br />");
-
-	$ns = $sxl_result->getNameSpaces(true);
-
-//print_r("NS:".$ns."<br />");
-
-	foreach ($sxl_result->children($ns[rdf]) as $description) {
-		print_r("DESCRIPTION:".$description." --- ");
-      		$descriptionname = $description->getName();
-	        echo "descriptionName:".$descriptionname . " --- ";
-		foreach ($description->children() as $things) {
-			print_r("things:".$things . " --- ");
-		        $name = $things->getName();
-		        echo "name:".$name . "<br />";
-      		}
-	}*/
     exit();
   }
 }
 
-/* FROM ingest.inc of multites solution pack
-function fba_solution_pack_import_multites_form_ingest_validate($form, &$form_state) {
-  $fieldname = 'ingest-file-location';
-
-// If a file was uploaded, process it.
-  if (isset($_FILES['files']) && is_uploaded_file($_FILES['files']['tmp_name'][$fieldname])) {
-
-// Attempt to save the uploaded file to a temp area on disk.
-    $file = file_save_upload($fieldname);
-
-// set error if file was not uploaded
-    if (!$file) {
-      form_set_error($fieldname, 'Error uploading file.');
-      return;
-    }
-
-    $filenameparts = pathinfo($file->filename);
-
-    if (strtolower($filenameparts['extension']) != 'xml') {
-      form_set_error($fieldname, 'File extension must be xml.');
-    }
-    else {
-// TODO: check if it's a well-formed xml file?
-//
-// Set files to form_state, to process when form is submitted.
-      $form_state['values']['file'] = $file;
-    }
-  }
-  else {
-// Set error.
-    form_set_error($fieldname, 'Error uploading file.');
-    return;
-  }
-}*/
 
 /**
  * Implements form validation.
@@ -187,8 +123,6 @@ $_FILES['uploaded_file']['name']));
  * @param array $valid_CSV
  *   standard valid_CSV boolean variable for whether the CSV file has been found valid or not
  */
- 
- 
 function fba_solution_pack_uploadCSV_check_vocab_term(&$term, &$valid_CSV)  {
 	// check that each term in the vocab row starts with the right prefix
 	if (!ereg("^dtc-vocab:", $term))   {
@@ -197,7 +131,6 @@ function fba_solution_pack_uploadCSV_check_vocab_term(&$term, &$valid_CSV)  {
 		echo "$term is not a vocabulary term (missing the dtc-vocab: prefix) <br />";
 	} else {
 		$term=trim(substr(strstr($term, ":"), 1), " \"");
-//print_r("<br />term ".$i.": ".$term.". ");
 		// Check that each term in the vocab row is a valid vocab term	
 		$query = 'SELECT ?s WHERE {
 				?s <info:fedora/fedora-system:def/model#label> "'.$term.'" .
@@ -221,12 +154,10 @@ function fba_solution_pack_uploadCSV_check_vocab_term(&$term, &$valid_CSV)  {
 					?s <info:fedora/fedora-system:def/relations-external#isMemberOfCollection> 
 						<info:fedora/vocab:collection> .
 				}'; 
-echo "Not finding \"$term\", trying it with capitalisation as $ucfirstterm. ";
+				echo "Not finding \"$term\", trying it with capitalisation as $ucfirstterm. ";
 				// run the query to see if current term is a vocab term. 
 				$result = uploadCSV_risearch($query, 'TUPLE', 1, 'Sparql'); 
-//print_r(htmlentities($result));				
-		$returnedURIs = fba_solution_pack_uploadCSV_get_URI_from_Sparql_result($result);
-//print_r($returnedURIs);
+				$returnedURIs = fba_solution_pack_uploadCSV_get_URI_from_Sparql_result($result);
 			}
 		if (count($returnedURIs) <>1) {
 				// If the term still isn't being found, try doing a case-insensitive 
@@ -241,7 +172,6 @@ echo "Not finding \"$term\", trying it with capitalisation as $ucfirstterm. ";
 				echo "Not finding \"$term\", trying a case insensitive search (slower). ";
 				// run the query to see if current term is a vocab term. 
 				$result = uploadCSV_risearch($query, 'TUPLE', 1, 'Sparql'); 
-//print_r(htmlentities($result));				
 				if ($result == 0) {
 					// TODO search for partial match? Possibly Solr
 					// TODO but for now the search stops here
@@ -260,6 +190,8 @@ echo "Not finding \"$term\", trying it with capitalisation as $ucfirstterm. ";
 		}
 	}
 	// TODO need to retrieve and return PID for vocab term and use this
+	// TODO NB currently I'm using the term as in the CSV even if it is capitalised wrongly
+	
 }
 
 function fba_solution_pack_uploadCSV_get_URI_from_Sparql_result($result)  {
@@ -282,7 +214,6 @@ print_r($units);
 echo "<br /><br /><b>Data Array:</b> ";
 print_r($data_array);
 	/** to be returned: 
-	<?xml version="1.0"?>
 	<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
 	xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#" 
 	xmlns:relsext="info:fedora/fedora-system:def/relations-external#" 
@@ -291,51 +222,21 @@ print_r($data_array);
 	xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/" 
 	xmlns:fedora-model="info:fedora/fedora-system:def/model#"
 	xmlns:dtc="http://www.dtcarchive.org/ontology#">
-
-	<rdf:Description rdf:about="info:fedora/dtc:123">
-		<relsext:hasConstituent rdf:parseType="Resource">
-			<dc:identifier>1</dc:identifier>
-
-			<relsext:HasDescription>Year</relsext:HasDescription>
-			<dtc:containsDataOnVocabTerm rdf:resource="info:fedora/dtc-vocab:1111-1"/>    
-			<dtc:hasPreferredUnits>N/A</dtc:hasPreferredUnits>
-
-			<relsext:hasSubset>
-				<rdf:Seq>
-					<rdf:li>2007</rdf:li>
-					<rdf:li>2008</rdf:li>
-					<rdf:li>2009</rdf:li>
-					<rdf:li>2010</rdf:li>
-				</rdf:Seq>
-			</relsext:hasSubset>
-		</relsext:hasConstituent>
-	
-	</rdf:Description>
-
-	</rdf:RDF>
 	*/
-/** ATTEMPT USING STRINGS
-	$returnedRDF = '<rdf:RDF 
-	xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
-	xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
-	xmlns:relsext="info:fedora/fedora-system:def/relations-external#"
- 	
-xmlns:altrelsext="http://www.fedora.info/definitions/1/0/fedora-relsext-ontology.rdfs#"
-	xmlns:dc="http://purl.org/dc/elements/1.1/"
-	xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/"
-	xmlns:fedora-model="info:fedora/fedora-system:def/model#"
-	xmlns:dtc="http://www.dtcarchive.org/ontology#">
-	
-	<rdf:Description rdf:about=';
-
-
-echo "<br /><br /><b>Returned RDF:</b> ";
-print_r(htmlentities($returnedRDF));
-echo "<br />Hello world<br />"; */
 
 	$returnedRDF = new SimpleXMLElement('<rdf_RDF/>');
 	
-//todo populate with data		
+	//add namespaces NB there must be a better way TODO this
+	returnedRDF->addAttribute('xmlns_rdf',"http://www.w3.org/1999/02/22-rdf-syntax-ns#");
+	returnedRDF->addAttribute('xmlns_rdfs', "http://www.w3.org/2000/01/rdf-schema#");
+	returnedRDF->addAttribute('xmlns_relsext', "info:fedora/fedora-system:def/relations-external#");
+	returnedRDF->addAttribute('xmlns_altrelsext', "http://www.fedora.info/definitions/1/0/fedora-relsext-ontology.rdfs#");
+	returnedRDF->addAttribute('xmlns_dc', "http://purl.org/dc/elements/1.1/");
+	returnedRDF->addAttribute('xmlns_oai_dc', "http://www.openarchives.org/OAI/2.0/oai_dc/");
+	returnedRDF->addAttribute('xmlns_fedora-model', "info:fedora/fedora-system:def/model#");
+	returnedRDF->addAttribute('xmlns_dtc', "http://www.dtcarchive.org/ontology#");
+	
+    // TODO populate with data		
 	$desc = $returnedRDF->addChild('rdf_Description');
 	$constituent = $desc->addChild('relsext_hasConstituent');
 	$constituent->addAttribute('rdf_parseType', "Resource");
