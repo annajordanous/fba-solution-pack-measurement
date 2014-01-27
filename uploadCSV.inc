@@ -314,19 +314,61 @@ print_r($data_array);
 
 	</rdf:RDF>
 	*/
-	$returnedRDF = '<?xml version="1.0"?>\n
-	<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"\n
-	xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#" \n
-	xmlns:relsext="info:fedora/fedora-system:def/relations-external#" \n
-	xmlns:altrelsext="http://www.fedora.info/definitions/1/0/fedora-relsext-ontology.rdfs#"\n
-	xmlns:dc="http://purl.org/dc/elements/1.1/" \n
-	xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/" \n
-	xmlns:fedora-model="info:fedora/fedora-system:def/model#"\n
-	xmlns:dtc="http://www.dtcarchive.org/ontology#">\n\n
-
-	<rdf:Description rdf:about="';
+/** ATTEMPT USING STRINGS
+	$returnedRDF = '<rdf:RDF 
+	xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+	xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+	xmlns:relsext="info:fedora/fedora-system:def/relations-external#"
+ 	
+xmlns:altrelsext="http://www.fedora.info/definitions/1/0/fedora-relsext-ontology.rdfs#"
+	xmlns:dc="http://purl.org/dc/elements/1.1/"
+	xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/"
+	xmlns:fedora-model="info:fedora/fedora-system:def/model#"
+	xmlns:dtc="http://www.dtcarchive.org/ontology#">
 	
+	<rdf:Description rdf:about=';
+
+
+echo "<br /><br /><b>Returned RDF:</b> ";
+print_r(htmlentities($returnedRDF));
+echo "<br />Hello world<br />"; */
+
+	$returnedRDF = new SimpleXMLElement('<rdf_RDF/>');
+	
+//todo populate with data		
+	$desc = $returnedRDF->addChild('rdf_Description');
+	$constituent = $desc->addChild('relsext_hasConstituent');
+	$constituent->addAttribute('rdf_parseType', "Resource");
+
+	$constituent->addChild('dc_identifier', "1");
+
+	$constituent->addChild('relsext_HasDescription', "Year");
+	
+	//need better predicate
+	$pointerToVocab = 
+		$constituent->addChild('dtc_containsDataOnVocabTerm');
+	$pointerToVocab->addAttribute('rdf_resource',"info:fedora/vocab:1111");
+	
+	//need better predicate	
+	$constituent->addChild('dtc_hasPreferredUnits', "N/A");
+	
+	$subset = $constituent->addChild('relsext_hasSubset');
+	$seq = $subset->addChild('rdf_Seq');
+
+	$seq->addChild('rdf_li',"2007");
+	$seq->addChild('rdf_li',"2008");
+	$seq->addChild('rdf_li',"2009");
+	$seq->addChild('rdf_li',"2010");
+
+
+/* Using 
+http://stackoverflow.com/questions/486757/how-to-generate-xml-file-dynamically-using-php
+*/
+echo "<br />ReturnedRDF <br />";
+	print(htmlspecialchars($returnedRDF->asXML()));
+
 }
+
 
 /**
  * First attempt at generic risearch function.
