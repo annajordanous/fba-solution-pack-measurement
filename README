@@ -1,0 +1,5 @@
+From the info file:
+
+//this is where the custom mods to dc xslt files are stored
+dependencies[] = islandora_content_model_forms
+
