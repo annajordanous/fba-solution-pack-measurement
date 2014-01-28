@@ -88,10 +88,9 @@ $_FILES['uploaded_file']['name']));
 			
             for ($i=0, $j=count($vocab_terms); $i<$j; $i++)  {
                 $term = trim($vocab_terms[$i]);
-				fba_solution_pack_uploadCSV_check_vocab_term(&$term, &$valid_CSV);
-				// TODO need to collect PIDS and pass these on instead of the terms
+		fba_solution_pack_uploadCSV_check_vocab_term(&$term, &$valid_CSV);
+	        }
             }
-		}
 	}
 	// TODO check all rows have the same number of entries (Is this appropriate?)
 	if ($valid_CSV) { 
@@ -189,7 +188,6 @@ function fba_solution_pack_uploadCSV_check_vocab_term(&$term, &$valid_CSV)  {
 			echo "<br />$term validated successfully<br />";
 		}
 	}
-	// TODO need to retrieve and return PID for vocab term and use this
 	// TODO NB currently I'm using the term as in the CSV even if it is capitalised wrongly
 	
 }
@@ -203,16 +201,16 @@ function fba_solution_pack_uploadCSV_get_URI_from_Sparql_result($result)  {
       return $returnedURIs;
 }
 
+/**
+ * Creates RDF representation of the data and metadata in an uploaded CSV file 
+ * 
+ * @param $headers The header information in the first row of the uploaded CSV file
+ * @param $vocab_terms The vocab terms listed in the second row of the uploaded CSV file
+ * @param $units The measurement units given in the third row of the uploaded CSV file
+ * @param $data_array The data contained in rows 4..n of the uploaded CSV file
+ * 
+ */
 function fba_solution_pack_uploadCSV_create_RELS($headers, $vocab_terms, $units, $data_array)  {
-// TODO
-echo "<br /><br/><b>Headers:</b> ";
-print_r($headers);
-echo "<br /><br /><b>Vocab Terms:</b> ";
-print_r($vocab_terms);
-echo "<br /><br /><b>Units:</b> ";
-print_r($units);
-echo "<br /><br /><b>Data Array:</b> ";
-print_r($data_array);
 
 	$returnedRDF = new SimpleXMLElement('<rdf:RDF 
 		xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -221,23 +219,6 @@ print_r($data_array);
 		xmlns:altrelsext="http://www.fedora.info/definitions/1/0/fedora-relsext-ontology.rdfs#"
 		xmlns:dc="http://purl.org/dc/elements/1.1/"/>', NULL, FALSE, "http://www.w3.org/1999/02/22-rdf-syntax-ns#", TRUE);
 
-/*	//add namespaces
-	$rdf_ns = array(
-		'xmlns:rdf' => 'http://www.w3.org/1999/02/22-rdf-syntax-ns#',
-		'xmlns:rdfs' => 'http://www.w3.org/2000/01/rdf-schema#',
-		'xmlns:relsext' => 'info:fedora/fedora-system:def/relations-external#',
-		'xmlns:altrelsext' => 'http://www.fedora.info/definitions/1/0/fedora-relsext-ontology.rdfs#',
-		'xmlns:dc' => 'http://purl.org/dc/elements/1.1/',
-		'xmlns:oai_dc' => 'http://www.openarchives.org/OAI/2.0/oai_dc/',
-		'xmlns:fedora-model' => 'info:fedora/fedora-system:def/model#',
-		'xmlns:dtc' => 'http://www.dtcarchive.org/ontology#',
-		);
-	// register namespaces in the rdf document	
-	foreach ($rdf_ns as $prefix => $name) {
-		$returnedRDF->registerXPathNamespace($prefix, $name);
-		}
-*/
-    // TODO populate with data		
 	// This RDF file will have one RDF:description element, describing the CSV file.
 	$desc = $returnedRDF->addChild('rdf:Description', NULL, 'http://www.w3.org/1999/02/22-rdf-syntax-ns#');
 
@@ -265,7 +246,7 @@ print_r($data_array);
 		// (so the column dc:references that vocab term)
 		$pointerToVocab = 
 			$constituent->addChild('dc:references', NULL, 'http://purl.org/dc/elements/1.1/');
-		$pointerToVocab->addAttribute('rdf:resource','info:fedora/'.$vocab_terms[i], 
+		$pointerToVocab->addAttribute('rdf:resource','info:fedora/'.$vocab_terms[$i], 
 'http://www.w3.org/1999/02/22-rdf-syntax-ns#');
 	
 		// add reference to measurement units being used for that column's data
