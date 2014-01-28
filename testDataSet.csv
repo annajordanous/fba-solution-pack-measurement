@@ -1,0 +1,10 @@
+Year,Countries,Crop yield,Total N applied - N(FERT) - Applied Nitrogen Rate Excluding Fertiliser Application
+dtc-vocab: Year,dtc-vocab: Countries,dtc-vocab: Crop yield,dtc-vocab: Application rates
+Units: N/A,Units: N/A,Units: N/A,Units: kt/yr
+2007,England,Wheat,325.77
+2008,England,Wheat,344.38
+2009,England,Wheat,316.31
+2010,England,Wheat,347.63
+2011,England,Wheat,392.45
+2012,England,Wheat,358.55
+2013,England,Wheat,324.95
