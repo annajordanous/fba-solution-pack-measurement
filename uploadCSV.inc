@@ -213,60 +213,80 @@ echo "<br /><br /><b>Units:</b> ";
 print_r($units);
 echo "<br /><br /><b>Data Array:</b> ";
 print_r($data_array);
-	/** to be returned: 
-	<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
-	xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#" 
-	xmlns:relsext="info:fedora/fedora-system:def/relations-external#" 
-	xmlns:altrelsext="http://www.fedora.info/definitions/1/0/fedora-relsext-ontology.rdfs#"
-	xmlns:dc="http://purl.org/dc/elements/1.1/" 
-	xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/" 
-	xmlns:fedora-model="info:fedora/fedora-system:def/model#"
-	xmlns:dtc="http://www.dtcarchive.org/ontology#">
-	*/
 
-	$returnedRDF = new SimpleXMLElement('<rdf_RDF/>');
-	
-	//add namespaces NB there must be a better way TODO this
-	returnedRDF->addAttribute('xmlns_rdf',"http://www.w3.org/1999/02/22-rdf-syntax-ns#");
-	returnedRDF->addAttribute('xmlns_rdfs', "http://www.w3.org/2000/01/rdf-schema#");
-	returnedRDF->addAttribute('xmlns_relsext', "info:fedora/fedora-system:def/relations-external#");
-	returnedRDF->addAttribute('xmlns_altrelsext', "http://www.fedora.info/definitions/1/0/fedora-relsext-ontology.rdfs#");
-	returnedRDF->addAttribute('xmlns_dc', "http://purl.org/dc/elements/1.1/");
-	returnedRDF->addAttribute('xmlns_oai_dc', "http://www.openarchives.org/OAI/2.0/oai_dc/");
-	returnedRDF->addAttribute('xmlns_fedora-model', "info:fedora/fedora-system:def/model#");
-	returnedRDF->addAttribute('xmlns_dtc', "http://www.dtcarchive.org/ontology#");
-	
-    // TODO populate with data		
-	$desc = $returnedRDF->addChild('rdf_Description');
-	$constituent = $desc->addChild('relsext_hasConstituent');
-	$constituent->addAttribute('rdf_parseType', "Resource");
+	$returnedRDF = new SimpleXMLElement('<rdf:RDF 
+		xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+		xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#" 
+		xmlns:relsext="info:fedora/fedora-system:def/relations-external#" 
+		xmlns:altrelsext="http://www.fedora.info/definitions/1/0/fedora-relsext-ontology.rdfs#"
+		xmlns:dc="http://purl.org/dc/elements/1.1/"/>', NULL, FALSE, "http://www.w3.org/1999/02/22-rdf-syntax-ns#", TRUE);
 
-	$constituent->addChild('dc_identifier', "1");
-
-	$constituent->addChild('relsext_HasDescription', "Year");
-	
-	//need better predicate
-	$pointerToVocab = 
-		$constituent->addChild('dtc_containsDataOnVocabTerm');
-	$pointerToVocab->addAttribute('rdf_resource',"info:fedora/vocab:1111");
-	
-	//need better predicate	
-	$constituent->addChild('dtc_hasPreferredUnits', "N/A");
-	
-	$subset = $constituent->addChild('relsext_hasSubset');
-	$seq = $subset->addChild('rdf_Seq');
-
-	$seq->addChild('rdf_li',"2007");
-	$seq->addChild('rdf_li',"2008");
-	$seq->addChild('rdf_li',"2009");
-	$seq->addChild('rdf_li',"2010");
-
-
-/* Using 
-http://stackoverflow.com/questions/486757/how-to-generate-xml-file-dynamically-using-php
+/*	//add namespaces
+	$rdf_ns = array(
+		'xmlns:rdf' => 'http://www.w3.org/1999/02/22-rdf-syntax-ns#',
+		'xmlns:rdfs' => 'http://www.w3.org/2000/01/rdf-schema#',
+		'xmlns:relsext' => 'info:fedora/fedora-system:def/relations-external#',
+		'xmlns:altrelsext' => 'http://www.fedora.info/definitions/1/0/fedora-relsext-ontology.rdfs#',
+		'xmlns:dc' => 'http://purl.org/dc/elements/1.1/',
+		'xmlns:oai_dc' => 'http://www.openarchives.org/OAI/2.0/oai_dc/',
+		'xmlns:fedora-model' => 'info:fedora/fedora-system:def/model#',
+		'xmlns:dtc' => 'http://www.dtcarchive.org/ontology#',
+		);
+	// register namespaces in the rdf document	
+	foreach ($rdf_ns as $prefix => $name) {
+		$returnedRDF->registerXPathNamespace($prefix, $name);
+		}
 */
+    // TODO populate with data		
+	// This RDF file will have one RDF:description element, describing the CSV file.
+	$desc = $returnedRDF->addChild('rdf:Description', NULL, 'http://www.w3.org/1999/02/22-rdf-syntax-ns#');
+
+	//TODO how to find out the pid for the CSV file? currently initialised as a random pid
+	$CSV_pid = 'info:fedora/dtc:123';
+	$desc->addAttribute('rdf:about', $CSV_pid);
+
+	// Add metadata for each column of the CSV file, as individual Constituents of the CSV file
+	for ($i=0; $i < count($vocab_terms); $i++) {
+
+		$constituent = $desc->addChild('relsext:hasConstituent', NULL, 
+'info:fedora/fedora-system:def/relations-external#');
+		$constituent->addAttribute('rdf:parseType', "Resource", 
+'http://www.w3.org/1999/02/22-rdf-syntax-ns#');
+
+		// column identifiers will be the CSV pid  with - and column number appended to the end
+		$constituent->addChild('dc:identifier', $CSV_pid.'-'.$i, 'http://purl.org/dc/elements/1.1/');
+
+		// add the column header given in the first row of the CSV column
+		// (to set the value describing the column - relsext:HasDescription) 
+		$constituent->addChild('relsext:HasDescription', $headers[$i], 
+'info:fedora/fedora-system:def/relations-external#');
+		
+		// add link to the vocab term corresponding to that CSV column data
+		// (so the column dc:references that vocab term)
+		$pointerToVocab = 
+			$constituent->addChild('dc:references', NULL, 'http://purl.org/dc/elements/1.1/');
+		$pointerToVocab->addAttribute('rdf:resource','info:fedora/'.$vocab_terms[i], 
+'http://www.w3.org/1999/02/22-rdf-syntax-ns#');
+	
+		// add reference to measurement units being used for that column's data
+		// (as the dc:format of the data)
+		$constituent->addChild('dc:format', 'N/A', 'http://purl.org/dc/elements/1.1/'); //measurement units
+		
+		// data will be stored in RELSEXT as an RDF Seq object, i.e an ordered list
+		// Each column of data will form one Subset of data for the CSV file
+		$subset = $constituent->addChild('relsext:hasSubset', NULL, 
+'info:fedora/fedora-system:def/relations-external#');
+		$seq = $subset->addChild('rdf:Seq', NULL, 'http://www.w3.org/1999/02/22-rdf-syntax-ns#');
+
+		// extract each datum from the relevant column of the data_array
+		for ($j=0; $j<count($data_array); $j++)  {
+echo $j;
+			$seq->addChild('rdf:li', $data_array[$j][$i], 'http://www.w3.org/1999/02/22-rdf-syntax-ns#');
+		}
+	}
+
 echo "<br />ReturnedRDF <br />";
-	print(htmlspecialchars($returnedRDF->asXML()));
+print(htmlspecialchars($returnedRDF->asXML()));
 
 }
 
