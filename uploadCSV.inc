@@ -1,5 +1,5 @@
 <?php
-module_load_include('inc', 'fedora_repository', 'api/tuque');
+//module_load_include('inc', 'fedora_repository', 'api/tuque');
 
 function fba_solution_pack_uploadCSV(&$form_state = array()) {
 
@@ -126,7 +126,7 @@ $_FILES['uploaded_file']['name']));
  * @return the pid for the CSV file
  */
 
-fba_solution_pack_uploadCSV_get_CSV_pid()  {
+function fba_solution_pack_uploadCSV_get_CSV_pid()  {
 	//TODO how to find out/generate the pid for the CSV file? currently initialised as a random pid
 	$CSV_pid = 'info:fedora/dtc:123';
 	return $CSV_pid;
@@ -137,7 +137,7 @@ fba_solution_pack_uploadCSV_get_CSV_pid()  {
  * 
  * @param returnedRDF An RDF file containing the relations that will be added to the RELS datastream
  */
-fba_solution_pack_uploadCSV_update_datastream($returnedRDF) {
+function fba_solution_pack_uploadCSV_update_datastream($returnedRDF) {
 }
 
 
