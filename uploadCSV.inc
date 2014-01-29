@@ -1,4 +1,5 @@
 <?php
+module_load_include('inc', 'fedora_repository', 'api/tuque');
 
 function fba_solution_pack_uploadCSV(&$form_state = array()) {
 
@@ -107,12 +108,38 @@ $_FILES['uploaded_file']['name']));
 		$data_array[] = $current_row;
 			$current_row = explode(",", strtok("\n"));
 		} ;
-	fba_solution_pack_uploadCSV_create_RELS($headers, $vocab_terms, $units, $data_array);
-	echo "<br />";
+	$CSV_pid = fba_solution_pack_uploadCSV_get_CSV_pid();
+	$returnedRDF = fba_solution_pack_uploadCSV_create_RELS($headers, $vocab_terms, $units, $data_array, $CSV_pid);
+
+	echo "<br />Returned_RDF:<br />";
+	print(htmlentities($returnedRDF->asXML()));
+
+	fba_solution_pack_uploadCSV_update_datastream($returnedRDF);
 	} else {
 		echo "<br />File was NOT validated successfully<br /><br />";
 	}
 }
+
+/** 
+ * Identify the pid in the Fedora repository for the CSV file that is being uploaded
+ * 
+ * @return the pid for the CSV file
+ */
+
+fba_solution_pack_uploadCSV_get_CSV_pid()  {
+	//TODO how to find out/generate the pid for the CSV file? currently initialised as a random pid
+	$CSV_pid = 'info:fedora/dtc:123';
+	return $CSV_pid;
+}
+
+/** 
+ * Updates the RELS (INT? EXT) datastream with the relations in the parameter RDF file
+ * 
+ * @param returnedRDF An RDF file containing the relations that will be added to the RELS datastream
+ */
+fba_solution_pack_uploadCSV_update_datastream($returnedRDF) {
+}
+
 
 /**
  * Checks that each term in the vocab row of a CSV file starts with the right prefix and is a valid vocab term
@@ -208,9 +235,10 @@ function fba_solution_pack_uploadCSV_get_URI_from_Sparql_result($result)  {
  * @param $vocab_terms The vocab terms listed in the second row of the uploaded CSV file
  * @param $units The measurement units given in the third row of the uploaded CSV file
  * @param $data_array The data contained in rows 4..n of the uploaded CSV file
- * 
+ * @param @CSV_pid The pid that has been assigned to the CSV file
+ *
  */
-function fba_solution_pack_uploadCSV_create_RELS($headers, $vocab_terms, $units, $data_array)  {
+function fba_solution_pack_uploadCSV_create_RELS($headers, $vocab_terms, $units, $data_array, $CSV_pid)  {
 
 	$returnedRDF = new SimpleXMLElement('<rdf:RDF 
 		xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -222,8 +250,6 @@ function fba_solution_pack_uploadCSV_create_RELS($headers, $vocab_terms, $units,
 	// This RDF file will have one RDF:description element, describing the CSV file.
 	$desc = $returnedRDF->addChild('rdf:Description', NULL, 'http://www.w3.org/1999/02/22-rdf-syntax-ns#');
 
-	//TODO how to find out the pid for the CSV file? currently initialised as a random pid
-	$CSV_pid = 'info:fedora/dtc:123';
 	$desc->addAttribute('rdf:about', $CSV_pid);
 
 	// Add metadata for each column of the CSV file, as individual Constituents of the CSV file
@@ -266,9 +292,7 @@ echo $j;
 		}
 	}
 
-echo "<br />ReturnedRDF <br />";
-print(htmlspecialchars($returnedRDF->asXML()));
-
+	return $returnedRDF;
 }
 
 
