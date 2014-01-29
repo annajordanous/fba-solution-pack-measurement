@@ -1,5 +1,6 @@
 <?php
-//module_load_include('inc', 'fedora_repository', 'api/tuque');
+
+module_load_include('inc', 'islandora', 'includes/tuque');
 
 function fba_solution_pack_uploadCSV(&$form_state = array()) {
 
@@ -108,7 +109,8 @@ $_FILES['uploaded_file']['name']));
 		$data_array[] = $current_row;
 			$current_row = explode(",", strtok("\n"));
 		} ;
-	$CSV_pid = fba_solution_pack_uploadCSV_get_CSV_pid();
+	$repository= new IslandoraTuque();
+	$CSV_pid = fba_solution_pack_uploadCSV_get_CSV_pid($repository);
 	$returnedRDF = fba_solution_pack_uploadCSV_create_RELS($headers, $vocab_terms, $units, $data_array, $CSV_pid);
 
 	echo "<br />Returned_RDF:<br />";
@@ -128,6 +130,8 @@ $_FILES['uploaded_file']['name']));
 
 function fba_solution_pack_uploadCSV_get_CSV_pid()  {
 	//TODO how to find out/generate the pid for the CSV file? currently initialised as a random pid
+	/* wiki duraspace build access modify and delete fedora objects 
+with the Tuque interfacve */
 	$CSV_pid = 'info:fedora/dtc:123';
 	return $CSV_pid;
 }
