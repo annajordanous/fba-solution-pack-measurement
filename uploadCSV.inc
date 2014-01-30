@@ -76,7 +76,7 @@ $_FILES['uploaded_file']['name']));
             // File is a CSV, can start to process it
 
 			// Set files to form_state, to process when form is submitted.
-      		$form_state['values']['file'] = $file;
+ 	    $form_state['values']['file'] = $file;
 
             $file = file_get_contents($_FILES['uploaded_file']['tmp_name']);
 			
@@ -109,40 +109,77 @@ $_FILES['uploaded_file']['name']));
 		$data_array[] = $current_row;
 			$current_row = explode(",", strtok("\n"));
 		} ;
+
 	$repository= new IslandoraTuque();
-	$CSV_pid = fba_solution_pack_uploadCSV_get_CSV_pid($repository);
+	//if (strcmp(date_default_timezone_get(), 'Europe/London')<>0)  { 
+		date_default_timezone_set('Europe/London');
+	//}
+	$datestamp = date('Y-M-d-Hi-e', time());
+	$file_label = $_FILES['uploaded_file']['name'].'-'.$datestamp;
+	$CSV_pid = fba_solution_pack_uploadCSV_get_CSV_pid($repository, $file, $file_label);
+//	$CSV_pid = 'info:fedora/dtc:123';
+
 	$returnedRDF = fba_solution_pack_uploadCSV_create_RELS($headers, $vocab_terms, $units, $data_array, $CSV_pid);
 
 	echo "<br />Returned_RDF:<br />";
 	print(htmlentities($returnedRDF->asXML()));
-
-	fba_solution_pack_uploadCSV_update_datastream($returnedRDF);
+	// fba_solution_pack_uploadCSV_update_datastream($returnedRDF, $repository);
 	} else {
 		echo "<br />File was NOT validated successfully<br /><br />";
 	}
 }
 
 /** 
- * Identify the pid in the Fedora repository for the CSV file that is being uploaded
+ * Ingest the uploaded CSV file into the Fedora repository, and 
+ * return the pid in the Fedora repository for the CSV file that is being uploaded
+ * TODO split into two functions
+ * 
+ * @param repository An IslandoraTuque object representing the Fedora repository
+ * @param $CSV_file The CSV file to be ingested into the 
+ * @param file_label The label to be allocated to the file when it goes in the Fedora repository
  * 
  * @return the pid for the CSV file
  */
 
-function fba_solution_pack_uploadCSV_get_CSV_pid()  {
+function fba_solution_pack_uploadCSV_get_CSV_pid($repository, $file, $file_label)  {
 	//TODO how to find out/generate the pid for the CSV file? currently initialised as a random pid
-	/* wiki duraspace build access modify and delete fedora objects 
-with the Tuque interfacve */
-	$CSV_pid = 'info:fedora/dtc:123';
+	// Using Tuque doc at 
+	// https://wiki.duraspace.org/display/ISLANDORA712/Build,+Access,+Modify+and+Delete+Fedora+objects+with+the+Tuque+interface 
+
+	// FROM Duraspace: Identify the namespace for the new pid, and 
+	// identify the 
+	//collection the object is to be a member of. Tuque will retrieve the 
+	// next available PID in that namespace. 
+	$namespace = 'csv';
+	$collection_pid = 'islandora:root';
+
+	// Ingest object into fedora repository
+	// TODO should I be creating a new object?
+//	$repository->ingestObject($file);	
+	$new_fedora_object = islandora_ingest_add_object((Object) $file);
+
+//	$fedora_object = $repository->constructObject($namespace); // allow fedora to generate a PID	
+//echo "<br />REPOSITORY: ";
+//print_r($repository);
+/*	
+	// Label the object 
+	$fedora_object->label = "New CSV object"; 
+*/	$CSV_pid = 'info:fedora/dtc:123';
 	return $CSV_pid;
 }
+
 
 /** 
  * Updates the RELS (INT? EXT) datastream with the relations in the parameter RDF file
  * 
  * @param returnedRDF An RDF file containing the relations that will be added to the RELS datastream
+ * @param repository An IslandoraTuque object representing the Fedora 
+repository
  */
-function fba_solution_pack_uploadCSV_update_datastream($returnedRDF) {
-}
+
+/* function fba_solution_pack_uploadCSV_update_datastream($returnedRDF, 
+$repository) {
+} */
 
 
 /**
@@ -291,7 +328,6 @@ function fba_solution_pack_uploadCSV_create_RELS($headers, $vocab_terms, $units,
 
 		// extract each datum from the relevant column of the data_array
 		for ($j=0; $j<count($data_array); $j++)  {
-echo $j;
 			$seq->addChild('rdf:li', $data_array[$j][$i], 'http://www.w3.org/1999/02/22-rdf-syntax-ns#');
 		}
 	}
