@@ -1,5 +1,6 @@
 name = FBA Upload CSV solution pack
 description = Test Module
 dependencies[] = islandora_content_model_forms
+dependencies[] = tuque_wrapper
 package = FBA utilities
 core = 6.x
