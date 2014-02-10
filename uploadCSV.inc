@@ -110,76 +110,91 @@ $_FILES['uploaded_file']['name']));
 			$current_row = explode(",", strtok("\n"));
 		} ;
 
-	$repository= new IslandoraTuque();
+
+	$connection = new RepositoryConnection('http://localhost:8080/fedora', 
+'fedoraAdmin', 'Br1ght0nR0cks70');
+	$connection->reuseConnection = TRUE;
+	$repository = new FedoraRepository(new FedoraApi($connection),new SimpleCache());
+
+//	$repository = tuque_wrapper_get_repository_instance();
 	//if (strcmp(date_default_timezone_get(), 'Europe/London')<>0)  { 
 		date_default_timezone_set('Europe/London');
 	//}
 	$datestamp = date('Y-M-d-Hi-e', time());
 	$file_label = $_FILES['uploaded_file']['name'].'-'.$datestamp;
-	$CSV_pid = fba_solution_pack_uploadCSV_get_CSV_pid($repository, $file, $file_label);
-//	$CSV_pid = 'info:fedora/dtc:123';
+
+	$pid = "vocab:1001";
+	$test_fedora_object = islandora_object_load($pid);
+echo "<br /><br />FEDORA OBJECT (to test we're in the right repository): ";
+print_r('pid '.$test_fedora_object->id);
+print_r(' label '.$test_fedora_object->label);
+
+	$CSV_pid = fba_solution_pack_uploadCSV_get_CSV_pid($repository);
 
 	$returnedRDF = fba_solution_pack_uploadCSV_create_RELS($headers, $vocab_terms, $units, $data_array, $CSV_pid);
-
-	echo "<br />Returned_RDF:<br />";
+	echo "<br />Returned RDF:<br />";
 	print(htmlentities($returnedRDF->asXML()));
-	// fba_solution_pack_uploadCSV_update_datastream($returnedRDF, $repository);
+
+	fba_solution_pack_uploadCSV_add_RELSINT($repository, $CSV_pid, 
+$file_label, $returnedRDF);
 	} else {
 		echo "<br />File was NOT validated successfully<br /><br />";
 	}
 }
 
 /** 
- * Ingest the uploaded CSV file into the Fedora repository, and 
- * return the pid in the Fedora repository for the CSV file that is being uploaded
- * TODO split into two functions
+ * Return the next available csv:pid in the Fedora repository for the 
+CSV file that is 
+being uploaded
  * 
  * @param repository An IslandoraTuque object representing the Fedora repository
- * @param $CSV_file The CSV file to be ingested into the 
- * @param file_label The label to be allocated to the file when it goes in the Fedora repository
- * 
+ *
  * @return the pid for the CSV file
  */
 
-function fba_solution_pack_uploadCSV_get_CSV_pid($repository, $file, $file_label)  {
-	//TODO how to find out/generate the pid for the CSV file? currently initialised as a random pid
-	// Using Tuque doc at 
-	// https://wiki.duraspace.org/display/ISLANDORA712/Build,+Access,+Modify+and+Delete+Fedora+objects+with+the+Tuque+interface 
-
-	// FROM Duraspace: Identify the namespace for the new pid, and 
-	// identify the 
-	//collection the object is to be a member of. Tuque will retrieve the 
+function fba_solution_pack_uploadCSV_get_CSV_pid($repository)  {
 	// next available PID in that namespace. 
 	$namespace = 'csv';
-	$collection_pid = 'islandora:root';
-
-	// Ingest object into fedora repository
-	// TODO should I be creating a new object?
-//	$repository->ingestObject($file);	
-	$new_fedora_object = islandora_ingest_add_object((Object) $file);
-
-//	$fedora_object = $repository->constructObject($namespace); // allow fedora to generate a PID	
-//echo "<br />REPOSITORY: ";
-//print_r($repository);
-/*	
-	// Label the object 
-	$fedora_object->label = "New CSV object"; 
-*/	$CSV_pid = 'info:fedora/dtc:123';
-	return $CSV_pid;
-}
-
+//	$collection_pid = 'islandora:root';
+	$CSV_pid = $repository->getNextIdentifier($namespace);
+	return $CSV_pid;	
+	}
 
 /** 
- * Updates the RELS (INT? EXT) datastream with the relations in the parameter RDF file
+ * Ingest object into fedora repository
+ * TODO should I be creating a new object? NO - datastreams for existing 
+object
  * 
- * @param returnedRDF An RDF file containing the relations that will be added to the RELS datastream
- * @param repository An IslandoraTuque object representing the Fedora 
-repository
+ * @param repository The current fedora repository
+ * @param CSV_pid The pid that has been generated for the CSV file
+ * @param file_label A string label for the new CSV file TODO CHECK
+ * @param returnedRDF The RDF to be added to the RELSINT datastream
  */
-
-/* function fba_solution_pack_uploadCSV_update_datastream($returnedRDF, 
-$repository) {
-} */
+function fba_solution_pack_uploadCSV_add_RELSINT($repository, $CSV_pid, 
+$file_label, $returnedRDF) {
+	$fedora_object=$repository->constructObject($CSV_pid);
+	$fedora_object->models=array('islandora:collectionCModel');
+	$fedora_object->label=$file_label;
+	$fedora_object->owner='fedoraAdmin';
+	
+	if (!isset($fedora_object['RELS_INT']))  {
+		$relsint_ds = $fedora_object->constructDatastream('RELS_INT', 'X');
+	} else {
+		$relsint_ds = $fedora_object['RELS_INT'];
+	}
+	$relsint_ds->label='Internal Relationships RELS_INT';
+	$relsint_ds->mimetype='application/rdf+xml';
+	$relsint_ds->setContentFromString($returnedRDF->asXML());
+	
+	$fedora_object->ingestDatastream($relsint_ds);
+	
+	$new_fedora_object = islandora_add_object($fedora_object);
+echo "<br /><br />";
+	$test_fedora_object = islandora_object_load($CSV_pid);
+echo "<br /><br />FEDORA OBJECT (to test we're in the right repository): ";
+print_r('id '.$test_fedora_object->id);
+print_r(' label '.$test_fedora_object->label);
+}
 
 
 /**
