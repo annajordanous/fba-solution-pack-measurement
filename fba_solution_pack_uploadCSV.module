@@ -24,6 +24,11 @@ function fba_solution_pack_uploadCSV_menu() {
     'page arguments' => array('fba_solution_pack_uploadCSV'),
     'access arguments' => array('access fba_solution_pack_uploadCSV content'),
     'type' => MENU_CALLBACK,
+    'pid' => 'fba:measurement_sub_class_cmodel',
+    'label' => 'FBA content model for measurement sub class',
+    'dsid' => 'ISLANDORACM',
+    'datastream_file' => "$module_path/xml/measurement_sub_class_cmodel.xml",
+    'cmodel' => 'fedora-system:ContentModel-3.0',
   );
 
   return $items;

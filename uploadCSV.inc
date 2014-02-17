@@ -2,6 +2,15 @@
 
 module_load_include('inc', 'islandora', 'includes/tuque');
 
+/** 
+ * Set up a HTML form to use to submit a file to be validated
+ * For testing only.
+ * 
+ * @param array &$form_state
+ * @return array form with submit button+array slot for uploaded 
+file
+ * 
+ */
 function fba_solution_pack_uploadCSV(&$form_state = array()) {
 
   $form = array();
@@ -32,6 +41,7 @@ function fba_solution_pack_uploadCSV(&$form_state = array()) {
 
 /**
  * Implements hook_submit.
+ * For testing only.
  *
  * @param array $form
  *   standard form variable for a hook
@@ -55,7 +65,8 @@ function fba_solution_pack_uploadCSV_submit($form, &$form_state) {
  *   standard form state variable for a hook
  */
 function fba_solution_pack_uploadCSV_validate($form, &$form_state) {
-     $valid_CSV = true;
+
+     $valid_CSV = fba_solution_pack_uploadCSV_check_filetype_uploaded();
     // Check file was uploaded successfully as a result of a user upload
     if (!is_uploaded_file($_FILES['uploaded_file']['tmp_name']))  {
         echo "failed - File not uploaded <br />";
@@ -140,6 +151,11 @@ $file_label, $returnedRDF);
 	} else {
 		echo "<br />File was NOT validated successfully<br /><br />";
 	}
+}
+
+
+function fba_solution_pack_uploadCSV_check_filetype_uploaded()  {
+	return true;
 }
 
 /** 
