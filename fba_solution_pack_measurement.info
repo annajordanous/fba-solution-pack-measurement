@@ -1,0 +1,7 @@
+name = FBA Measurement solution pack
+description = Module to upload Measurement data (CSV files) and metadata 
+to the DTC Archive
+dependencies[] = islandora_content_model_forms
+dependencies[] = tuque_wrapper
+package = FBA utilities
+core = 6.x

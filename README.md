@@ -1,4 +1,4 @@
-fba-solution-pack-uploadCSV ===========================
+fba_solution_pack_measurement ===========================
 
 [work in progress] An Islandora Solution pack for the DEFRA DTC archive 
 project, a collaborative project involving the Freshwater Biological 
