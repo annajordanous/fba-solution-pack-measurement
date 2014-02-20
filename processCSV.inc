@@ -169,20 +169,22 @@ $controlGroup="X", $label="MADS Record for this object", $mimetype="text/xml", $
 	//   [check image/book/PDF - generate pointer to file that is stored within repository somewhere(binary within object?)]
 	$ds_file = file_get_contents($_FILES['uploaded_file']['tmp_name']);	
 	$csv_datastream = fba_solution_pack_measurement_create_datastream($new_measurement_object, $dsid="CSV", 
-$controlGroup="X", $label="CSV file for this object", $mimetype="text/csv", $ds_file, $from_file = true; );
-	$new_measurement_object->ingestDatastream($dc_datastream);
+$controlGroup="X", $label="CSV file for this object", $mimetype="application/rdf+xml", $ds_file, $from_file = true);
+	$new_measurement_object->ingestDatastream($csv_datastream);
 
 	// 5. Generate RELS_INT datastream [see later functions]
-	$returnedRDF = fba_solution_pack_measurement_create_RELS($headers, $vocab_terms, $units, $data_array, $measurement_pid);
-	fba_solution_pack_measurement_add_RELS_INT($repository, $measurement_pid, $returnedRDF);
-
+	$ds_content = fba_solution_pack_measurement_create_RELS($headers, $vocab_terms, $units, $data_array, $measurement_pid);
+        $rels_int_datastream = fba_solution_pack_measurement_create_datastream($new_measurement_object, $dsid="RELS_INT", 
+$controlGroup="X", $label="Fedora Internal Relationships file for this object", $mimetype="application/rdf+xml", $ds_content);
+	$new_measurement_object->ingestDatastream($rels_int_datastream);
+	
 	// 6. Generate RELS_EXT datastream 
 	$ds_content = '<rdf:RDF><rdf:Description rdf:about="'.$measurement_pid.'">
 		<hasModel rdf:resource="info:fedora/fba:measurement_sub_class_cmodel"/>
 		</rdf:Description></rdf:RDF>'; // TODO DUMMY-GENERATE RELS_INT CONTENT
 	$rels_ext_datastream = fba_solution_pack_measurement_create_datastream($new_measurement_object, 
 $dsid="RELS_EXT", $controlGroup="X", $label="Fedora Object-to-Object Relationship Record for this object", 
-$mimetype="text/rdf", $ds_content);
+$mimetype="application/rdf+xml", $ds_content);
 	$new_measurement_object->ingestDatastream($rels_ext_datastream);
 
 	// ingest object
@@ -268,8 +270,7 @@ function fba_solution_pack_measurement_create_new_measurement_object($repository
 	return $new_fedora_object;
 }
 
-function fba_solution_pack_measurement_create_datastream(&$fedora_object, $dsid, $controlGroup="X",
-		$label="New Datastream", $mimetype, $content, $from_file="false") {
+function fba_solution_pack_measurement_create_datastream(&$fedora_object, $dsid, $mimetype, $content, $controlGroup = "X", $label = "New Datastream", $from_file = "false") {
 	$new_datastream = $fedora_object->constructDatastream($dsid, $controlGroup);
 	$new_datastream->label=$label;
 	$new_datastream->mimetype=$mimetype;
@@ -278,32 +279,7 @@ function fba_solution_pack_measurement_create_datastream(&$fedora_object, $dsid,
 	} else {
 		$new_datastream->setContentFromString($content);
 	}
-}
-
-/** 
- * Generate RELS-INT datastream for our new  Measurement object 
- * 
- * @param repository The current fedora repository
- * @param measurement_pid 
- *   The pid for the Measurement object 
- * @param returnedRDF The RDF to be added to the RELSINT datastream
- */
-function fba_solution_pack_measurement_add_RELS_INT($repository, $measurement_pid, 
-$returnedRDF) {
-
-	$fedora_object=islandora_object_load($measurement_pid);
-	if (!isset($fedora_object["RELS_INT"]))  {
-		$relsint_ds = $fedora_object->constructDatastream("RELS_INT", "X");
-	} else {
-		$relsint_ds = $fedora_object["RELS_INT"];
-	}
-//	$datestamp = date('dMY-H:i', time());
-//	$file_label = $_FILES['uploaded_file']['name'].'-'.$datestamp;
-	$relsint_ds->label='Internal Relationships RELS_INT';
-	$relsint_ds->mimetype='application/rdf+xml';
-	$relsint_ds->setContentFromString($returnedRDF->asXML());
-	
-	$fedora_object->ingestDatastream($relsint_ds);
+        return $new_datastream;
 }
 
 
@@ -484,7 +460,7 @@ function fba_solution_pack_measurement_create_RELS($headers, $vocab_terms, $unit
 		}
 	}
 
-	return $returnedRDF;
+	return $returnedRDF->asXML();
 }
 
 
