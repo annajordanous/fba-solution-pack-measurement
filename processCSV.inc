@@ -26,7 +26,7 @@ function fba_solution_pack_measurement(&$form_state = array()) {
 
 // Add a file upload file.
     $form['uploaded_file'] = array(
-		'#name' => 'uploaded_file',
+		'#title' => 'UploadingCSV',
 		'#type' => 'file',
 		'#description' => t('To validate a CSV file of data'),
     );
@@ -40,8 +40,60 @@ function fba_solution_pack_measurement(&$form_state = array()) {
 }
 
 /**
- * Implements hook_submit.
- * For testing only.
+ * Checks a valid CSV function has been uploaded
+ *
+ * @param array $form
+ *   standard form variable for a hook
+ * @param array $form_state
+ *   standard form state variable for a hook
+ * 
+ */
+function fba_solution_pack_measurement_validate($form, &$form_state) {
+
+     $valid_CSV = false; //default init value
+     if (!$form_state['form_has_errors']) {
+       $valid_CSV = fba_solution_pack_measurement_check_filetype_uploaded();
+       if ($valid_CSV) {
+	// File is a CSV, can start to process it
+	// Set files to form_state, to process when form is submitted.
+        $file = file_get_contents($_FILES['uploaded_file']['tmp_name']);
+        $form_state['values']['file'] = $file;
+			
+	// Processing First Row of CSV file (user defined headers)
+	// ignore the first row for now - contains non-DTC-vocab headers
+        $temp = explode(",", strtok($file, "\n"));
+
+	// Processing Second Row of CSV files (vocab terms)
+	// Examine the second row and check if each entry in this row  is a DTC vocab term
+        $vocab_terms = explode(",", strtok("\n"));
+	$vocab_terms = trim_array_values($vocab_terms);
+	// NB TODO replace the use of explode() with fgetcsv (in case cells have commas in them)
+
+	$invalid_vocab_term_found = false;		
+        for ($i=0, $j=count($vocab_terms); $i<$j; $i++)  {
+            $term = trim($vocab_terms[$i]);
+	    // Check terms. Set flag if invalid vocab term found
+	    $vocab_terms[$i] = fba_solution_pack_measurement_check_vocab_term(&$term);
+	    if ($vocab_terms[$i]==NULL) {
+		$invalid_vocab_term_found = true;
+		}
+	    }
+	$valid_CSV = !($invalid_vocab_term_found);
+        }
+	// TODO check all rows have the same number of entries (Is this appropriate?)
+
+    }
+    if (!$valid_CSV) {
+	form_set_error('uploaded_file', "The file that has been uploaded is not valid CSV or does not conform to the DTC model");
+	return;
+    }
+    
+}
+
+
+/**
+ * Extracts the data and headers from the CSV file uploaded
+ * and generates RELS-INT metadata for the CSV file 
  *
  * @param array $form
  *   standard form variable for a hook
@@ -49,131 +101,138 @@ function fba_solution_pack_measurement(&$form_state = array()) {
  *   standard form state variable for a hook
  */
 function fba_solution_pack_measurement_submit($form, &$form_state) {
+echo "IN SUBMIT<br />";
+	// File is a CSV, can start to process it
+	// Set files to form_state, to process when form is submitted.
+        $file = file_get_contents($_FILES['uploaded_file']['tmp_name']);
+        $form_state['values']['file'] = $file;
+			
+	// Processing First Row of CSV file (user defined headers)
+	// ignore the first row for now - contains non-DTC-vocab headers
+	// Just convert it into an array containing each header
+        $anna_headers = explode(",", strtok($file, "\n"));
+	$anna_headers = trim_array_values($anna_headers);
+echo "<br />headers:";
+var_dump($anna_headers);
+	// Processing Second Row of CSV files (vocab terms)
+	// Examine the second row and check if each entry in this row  is a DTC vocab term
+        $vocab_terms = explode(",", strtok("\n"));
+	$vocab_terms = trim_array_values($vocab_terms);
+	// NB TODO replace the use of explode() with fgetcsv (in case cells have commas in them)
+echo "<br />vocab_terms:";
+var_dump($vocab_terms);
+//	$invalid_vocab_term_found = false;		
+        for ($i=0, $j=count($vocab_terms); $i<$j; $i++)  {
+            $term = trim($vocab_terms[$i]);
+	    // Check terms. Set flag if invalid vocab term found
+	    $vocab_terms[$i] = fba_solution_pack_measurement_check_vocab_term(&$term);
+//	    if ($vocab_terms[$i]==NULL) {
+//		$invalid_vocab_term_found = true;
+//		}
+	    }
+//	$valid_CSV = !($invalid_vocab_term_found);
+        
+	// TODO check all rows have the same number of entries (Is this appropriate?)
 
-    if (!$form_state['form_has_errors']) {
-    exit();
-  }
+//	if ($valid_CSV) { 
+//	    echo "<br />File validated successfully. <br /><br />"; 
+	    // File is validated - 
+	    // we can now extract the data from the CSV file and store as RDF
+
+	    // Processing Third Row of CSV files (measurement units)
+	    // Extract the third row information into an array
+	    $units = explode(",", strtok("\n"));
+	    $units = trim_array_values($units);
+
+	    // go through and extract the data into an array of arrays
+	    $current_row = explode(",", strtok("\n"));
+	    $data_array = array();
+	    while (count($current_row)>1 && $current_row[0] !== NULL) {
+		// add new data to the data array
+		$data_array[] = $current_row;
+		$current_row = explode(",", strtok("\n"));
+		} ;
+
+	$repository =  fba_solution_pack_measurement_setup_repository_connection();
+
+	$datestamp = date('dMY-H:i', time());
+	$file_label = $_FILES['uploaded_file']['name'].'-'.$datestamp;
+// TODO replace this generated measurement_pid by the pid of the associated Measurement object
+// using form data
+	$measurement_pid = fba_solution_pack_measurement_get_measurement_pid($repository);
+
+	$returnedRDF = fba_solution_pack_measurement_create_RELS($anna_headers, $vocab_terms, $units, $data_array, $measurement_pid);
+	echo "<br />Returned RDF:<br />";
+	print(htmlentities($returnedRDF->asXML()));
+
+	fba_solution_pack_measurement_add_RELS_INT($repository, $measurement_pid, $returnedRDF);
+//	} else {
+//		echo "<br />File was NOT validated successfully<br /><br />";
+//	}
+//	return $valid_CSV;
+//	exit();
+}
+
+function trim_array_values($array)  {
+    foreach($array as $key => $value)  {
+	$array[$key] = trim($value);
+    }
+    return $array;
 }
 
 
-/**
- * Implements form validation.
- *
- * @param array $form
- *   standard form variable for a hook
- * @param array $form_state
- *   standard form state variable for a hook
+/** 
+ * Checks that a CSV file has been uploaded successfully.
+ * 
+ * return boolean true if a file has been uploaded successfully and it is of type csv 
+ * 	(i.e. it has the extension .csv); return false otherwise
  */
-function fba_solution_pack_measurement_validate($form, &$form_state) {
+function fba_solution_pack_measurement_check_filetype_uploaded()  {
+    $valid_CSV = true; // default value;
 
-     $valid_CSV = fba_solution_pack_measurement_check_filetype_uploaded();
     // Check file was uploaded successfully as a result of a user upload
     if (!is_uploaded_file($_FILES['uploaded_file']['tmp_name']))  {
         echo "failed - File not uploaded <br />";
 		$valid_CSV = false;
     } else {
-        echo "File uploaded successfully<br />";
+        echo "File uploaded successfully. Validating vocabulary terms used in ";
+	print($_FILES['uploaded_file']['name']." ...<br />");
 
         // Check file is a CSV file
         // Originally tried the line below but doesn't work for CSV files generated
-		// 	through Excel's save as CSV function
-		// if (strcmp($_FILES['uploaded_file']['type'],'text/csv') <>0) {
+	// 	through Excel's save as CSV function
+	// if (strcmp($_FILES['uploaded_file']['type'],'text/csv') <>0) 
 		
-		if (strcasecmp(end(explode('.', $_FILES['uploaded_file']['name'])),'csv')<>0) {
+	if (strcasecmp(end(explode('.', $_FILES['uploaded_file']['name'])),'csv')<>0) {
             echo "This file is not a csv file, file extension is:".end(explode('.', 
 $_FILES['uploaded_file']['name']));
-			$valid_CSV = false;
-		} else {
-            // File is a CSV, can start to process it
-
-			// Set files to form_state, to process when form is submitted.
- 	    $form_state['values']['file'] = $file;
-
-            $file = file_get_contents($_FILES['uploaded_file']['tmp_name']);
-			
-			// ignore the first row for now - contains non-DTC-vocab headers
-			// Just convert it into an array containing each header
-            $headers = explode(",", strtok($file, "\n"));
-			// Examine the second row and check if each entry in this row  is a DTC vocab term
-            $vocab_terms = explode(",", strtok("\n"));
-
-			// NB TODO replace the use of explode() with fgetcsv (in case cells have commas in them)
-			
-            for ($i=0, $j=count($vocab_terms); $i<$j; $i++)  {
-                $term = trim($vocab_terms[$i]);
-		fba_solution_pack_measurement_check_vocab_term(&$term, &$valid_CSV);
-	        }
-            }
+   	    $valid_CSV = false;
+	    } 
 	}
-	// TODO check all rows have the same number of entries (Is this appropriate?)
-	if ($valid_CSV) { 
-		echo "<br />File validated successfully<br /><br />"; 
-		// File is valid - we can now extract the data from the CSV file and store as RDF
-		// Extract the third row information into an array
-		$units = explode(",", strtok("\n"));
-
-		// go through and extract the data into an array of arrays
-		$current_row = explode(",", strtok("\n"));
-		$data_array = array();
-		while (count($current_row)>1 && $current_row[0] !== NULL) {
-		// add new data to the data array
-		$data_array[] = $current_row;
-			$current_row = explode(",", strtok("\n"));
-		} ;
-
-
-	$connection = new RepositoryConnection('http://localhost:8080/fedora', 
-'fedoraAdmin', 'Br1ght0nR0cks70');
-	$connection->reuseConnection = TRUE;
-	$repository = new FedoraRepository(new FedoraApi($connection),new SimpleCache());
-
-//	$repository = tuque_wrapper_get_repository_instance();
-	//if (strcmp(date_default_timezone_get(), 'Europe/London')<>0)  { 
-		date_default_timezone_set('Europe/London');
-	//}
-	$datestamp = date('Y-M-d-Hi-e', time());
-	$file_label = $_FILES['uploaded_file']['name'].'-'.$datestamp;
-
-	$pid = "vocab:1001";
-	$test_fedora_object = islandora_object_load($pid);
-echo "<br /><br />FEDORA OBJECT (to test we're in the right repository): ";
-print_r('pid '.$test_fedora_object->id);
-print_r(' label '.$test_fedora_object->label);
-
-	$CSV_pid = fba_solution_pack_measurement_get_CSV_pid($repository);
-
-	$returnedRDF = fba_solution_pack_measurement_create_RELS($headers, $vocab_terms, $units, $data_array, $CSV_pid);
-	echo "<br />Returned RDF:<br />";
-	print(htmlentities($returnedRDF->asXML()));
-
-	fba_solution_pack_measurement_add_RELSINT($repository, $CSV_pid, 
-$file_label, $returnedRDF);
-	} else {
-		echo "<br />File was NOT validated successfully<br /><br />";
-	}
+    return $valid_CSV;
 }
-
-
-function fba_solution_pack_measurement_check_filetype_uploaded()  {
-	return true;
-}
-
+	
 /** 
  * Return the next available csv:pid in the Fedora repository for the 
 CSV file that is 
 being uploaded
  * 
  * @param repository An IslandoraTuque object representing the Fedora repository
- *
+ * @param namespace default 'csv' - the namespace for the pid (optional)
  * @return the pid for the CSV file
  */
 
-function fba_solution_pack_measurement_get_CSV_pid($repository)  {
-	// next available PID in that namespace. 
+function fba_solution_pack_measurement_get_measurement_pid($repository, 
+$namespace='csv')  {
+// Uncomment to find new PID
+/*	// next available PID in that namespace. 
 	$namespace = 'csv';
 //	$collection_pid = 'islandora:root';
-	$CSV_pid = $repository->getNextIdentifier($namespace);
-	return $CSV_pid;	
+	$measurement_pid = $repository->getNextIdentifier($namespace);
+*/
+// Uncomment to use test pid to add new datastreams too
+	$measurement_pid = 'test:1001';
+	return $measurement_pid;	
 	}
 
 /** 
@@ -182,50 +241,63 @@ function fba_solution_pack_measurement_get_CSV_pid($repository)  {
 object
  * 
  * @param repository The current fedora repository
- * @param CSV_pid The pid that has been generated for the CSV file
- * @param file_label A string label for the new CSV file TODO CHECK
+ * @param measurement_pid 
+ *   The pid for the Measurement object associated with the CSV file
  * @param returnedRDF The RDF to be added to the RELSINT datastream
  */
-function fba_solution_pack_measurement_add_RELSINT($repository, $CSV_pid, 
-$file_label, $returnedRDF) {
-	$fedora_object=$repository->constructObject($CSV_pid);
-	$fedora_object->models=array('islandora:collectionCModel');
-	$fedora_object->label=$file_label;
-	$fedora_object->owner='fedoraAdmin';
-	
-	if (!isset($fedora_object['RELS_INT']))  {
-		$relsint_ds = $fedora_object->constructDatastream('RELS_INT', 'X');
+function fba_solution_pack_measurement_add_RELS_INT($repository, $measurement_pid, 
+$returnedRDF) {
+//	$fedora_object=$repository->constructObject($measurement_pid);
+//	$fedora_object->models=array('islandora:collectionCModel');
+//	$fedora_object->owner='fedoraAdmin';
+
+	$fedora_object=islandora_object_load($measurement_pid);
+//echo "<br />rels_ext:";
+//var_dump($fedora_object["RELS_EXT"]);
+//echo "<br />rels_int:";
+//var_dump($fedora_object["RELS_INT"]);
+//foreach($fedora_object as $key => $value)  {
+//echo "<br><br />KEY $key :";
+//var_dump($fedora_object[$key]);
+//}	
+	if (!isset($fedora_object["RELS_INT"]))  {
+		$relsint_ds = $fedora_object->constructDatastream("RELS_INT", "X");
 	} else {
-		$relsint_ds = $fedora_object['RELS_INT'];
+		$relsint_ds = $fedora_object["RELS_INT"];
 	}
+
 	$relsint_ds->label='Internal Relationships RELS_INT';
 	$relsint_ds->mimetype='application/rdf+xml';
 	$relsint_ds->setContentFromString($returnedRDF->asXML());
 	
 	$fedora_object->ingestDatastream($relsint_ds);
 	
-	$new_fedora_object = islandora_add_object($fedora_object);
+/*	$new_fedora_object = islandora_add_object($fedora_object);
 echo "<br /><br />";
-	$test_fedora_object = islandora_object_load($CSV_pid);
-echo "<br /><br />FEDORA OBJECT (to test we're in the right repository): ";
-print_r('id '.$test_fedora_object->id);
-print_r(' label '.$test_fedora_object->label);
+	$test_fedora_object = islandora_object_load($measurement_pid);
+echo "<br /><br />FEDORA OBJECT generated with RELS-INT): <br />&nbsp;";
+print_r('<b>id</b>: '.$test_fedora_object->id);
+print_r(' <b>label</b>: '.$test_fedora_object->label.'<br />');
+*/
 }
 
 
 /**
- * Checks that each term in the vocab row of a CSV file starts with the right prefix and is a valid vocab term
+ * Checks validity of a term in the vocab row of a CSV file. Check:
+ *  1. it starts with the right prefix 
+ *  2. it is a valid vocab term in the DTC vocabulary
  *
  * @param array $term
  *   the term being checked for validity
- * @param array $valid_CSV
- *   standard valid_CSV boolean variable for whether the CSV file has been found valid or not
+ * @return string vocab_pid
+ * 	return the pid of the $term in the DTC vocabulary, 
+ * 	or NULL (if invalid term)
  */
-function fba_solution_pack_measurement_check_vocab_term(&$term, &$valid_CSV)  {
+function fba_solution_pack_measurement_check_vocab_term(&$term)  {
+	$vocab_pid=NULL; // default to null
 	// check that each term in the vocab row starts with the right prefix
 	if (!ereg("^dtc-vocab:", $term))   {
 		// if a term does not start dtc-vocab, reject
-		$valid_CSV = false;                     
 		echo "$term is not a vocabulary term (missing the dtc-vocab: prefix) <br />";
 	} else {
 		$term=trim(substr(strstr($term, ":"), 1), " \"");
@@ -252,12 +324,12 @@ function fba_solution_pack_measurement_check_vocab_term(&$term, &$valid_CSV)  {
 					?s <info:fedora/fedora-system:def/relations-external#isMemberOfCollection> 
 						<info:fedora/vocab:collection> .
 				}'; 
-				echo "Not finding \"$term\", trying it with capitalisation as $ucfirstterm. ";
+				echo "&nbsp;&nbsp;Not finding \"$term\", trying it with capitalisation as $ucfirstterm. ";
 				// run the query to see if current term is a vocab term. 
 				$result = measurement_risearch($query, 'TUPLE', 1, 'Sparql'); 
 				$returnedURIs = fba_solution_pack_measurement_get_URI_from_Sparql_result($result);
 			}
-		if (count($returnedURIs) <>1) {
+			if (count($returnedURIs) <>1) {
 				// If the term still isn't being found, try doing a case-insensitive 
 				//  filtered search for the term. This is much slower than the above searches.
 				//  TODO replace this search by a Solr search?						
@@ -265,30 +337,54 @@ function fba_solution_pack_measurement_check_vocab_term(&$term, &$valid_CSV)  {
 					?s <info:fedora/fedora-system:def/model#label> ?label .
 					?s <info:fedora/fedora-system:def/relations-external#isMemberOfCollection> 
 						<info:fedora/vocab:collection> .
-					FILTER (regex(str(?label), "'.$term.'", -i)); 
+					FILTER regex(str(?label), 
+"^'.$term.'$","i") 
 				}'; 
-				echo "Not finding \"$term\", trying a case insensitive search (slower). ";
+				echo "&nbsp;&nbsp;Not finding \"$term\", trying a case insensitive search (slower). ";
+//print(htmlentities($query));	
 				// run the query to see if current term is a vocab term. 
 				$result = measurement_risearch($query, 'TUPLE', 1, 'Sparql'); 
-				if ($result == 0) {
+				$returnedURIs = fba_solution_pack_measurement_get_URI_from_Sparql_result($result);
+				if (count($returnedURIs) <>1) {
+
 					// TODO search for partial match? Possibly Solr
 					// TODO but for now the search stops here
-					echo "<br />$term is invalid vocab term<br />";
-					$valid_CSV = false;
+					echo "<br />&nbsp;&nbsp;&nbsp;&nbsp;<b>$term is invalid vocab term</b><br />";
 				} else {
-					echo "<br />Case insensitive search for $term validated successfully<br />";
-					echo "To speed up the validation process, make sure you capitalise the 
-							DTC vocab terms as they are capitalised in the CVocabulary.<br />";
+					echo "&nbsp;Case insensitive search for $term validated successfully. ";
+					echo "<em>To speed up the validation process, make sure you capitalise the DTC vocab terms as they are capitalised in the Vocabulary.</em><br />";
+					$vocab_pid = $returnedURIs[0];
 				}
 			} else {
-				echo "<br />$ucfirstterm validated successfully<br />";
+				echo "&nbsp;$ucfirstterm validated successfully. ";
+				echo "<em>To speed up the validation process, make sure you capitalise the DTC vocab terms as they are capitalised in the Vocabulary.</em><br />";
+				$vocab_pid = $returnedURIs[0];
 			}
 		} else {
-			echo "<br />$term validated successfully<br />";
+//			echo "<br />&nbsp;&nbsp;$term validated successfully<br />";
+			$vocab_pid = $returnedURIs[0];
 		}
 	}
-	// TODO NB currently I'm using the term as in the CSV even if it is capitalised wrongly
-	
+	return $vocab_pid;
+}
+
+function fba_solution_pack_measurement_setup_repository_connection()  {
+	$connection = new RepositoryConnection('http://localhost:8080/fedora', 
+'fedoraAdmin', 'Br1ght0nR0cks70');
+	$connection->reuseConnection = TRUE;
+	$repository = new FedoraRepository(new FedoraApi($connection),new SimpleCache());
+
+//	$repository = tuque_wrapper_get_repository_instance();
+	//if (strcmp(date_default_timezone_get(), 'Europe/London')<>0)  { 
+		date_default_timezone_set('Europe/London');
+	//}
+
+//	$pid = "vocab:1001";
+//	$test_fedora_object = islandora_object_load($pid);
+//echo "<br /><br />FEDORA OBJECT (to test we're in the right repository): ";
+//print_r('pid '.$test_fedora_object->id);
+//print_r(' label '.$test_fedora_object->label);
+	return $repository;
 }
 
 function fba_solution_pack_measurement_get_URI_from_Sparql_result($result)  {
@@ -303,14 +399,14 @@ function fba_solution_pack_measurement_get_URI_from_Sparql_result($result)  {
 /**
  * Creates RDF representation of the data and metadata in an uploaded CSV file 
  * 
- * @param $headers The header information in the first row of the uploaded CSV file
+ * @param $anna_headers The header information in the first row of the uploaded CSV file
  * @param $vocab_terms The vocab terms listed in the second row of the uploaded CSV file
  * @param $units The measurement units given in the third row of the uploaded CSV file
  * @param $data_array The data contained in rows 4..n of the uploaded CSV file
- * @param @CSV_pid The pid that has been assigned to the CSV file
+ * @param @measurement_pid The pid that has been assigned to the CSV file
  *
  */
-function fba_solution_pack_measurement_create_RELS($headers, $vocab_terms, $units, $data_array, $CSV_pid)  {
+function fba_solution_pack_measurement_create_RELS($anna_headers, $vocab_terms, $units, $data_array, $measurement_pid)  {
 
 	$returnedRDF = new SimpleXMLElement('<rdf:RDF 
 		xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -322,7 +418,7 @@ function fba_solution_pack_measurement_create_RELS($headers, $vocab_terms, $unit
 	// This RDF file will have one RDF:description element, describing the CSV file.
 	$desc = $returnedRDF->addChild('rdf:Description', NULL, 'http://www.w3.org/1999/02/22-rdf-syntax-ns#');
 
-	$desc->addAttribute('rdf:about', $CSV_pid);
+	$desc->addAttribute('rdf:about', $measurement_pid);
 
 	// Add metadata for each column of the CSV file, as individual Constituents of the CSV file
 	for ($i=0; $i < count($vocab_terms); $i++) {
@@ -333,18 +429,18 @@ function fba_solution_pack_measurement_create_RELS($headers, $vocab_terms, $unit
 'http://www.w3.org/1999/02/22-rdf-syntax-ns#');
 
 		// column identifiers will be the CSV pid  with - and column number appended to the end
-		$constituent->addChild('dc:identifier', $CSV_pid.'-'.$i, 'http://purl.org/dc/elements/1.1/');
+		$constituent->addChild('dc:identifier', $measurement_pid.'-'.$i, 'http://purl.org/dc/elements/1.1/');
 
 		// add the column header given in the first row of the CSV column
 		// (to set the value describing the column - relsext:HasDescription) 
-		$constituent->addChild('relsext:HasDescription', $headers[$i], 
+		$constituent->addChild('relsext:HasDescription', $anna_headers[$i], 
 'info:fedora/fedora-system:def/relations-external#');
 		
 		// add link to the vocab term corresponding to that CSV column data
 		// (so the column dc:references that vocab term)
 		$pointerToVocab = 
 			$constituent->addChild('dc:references', NULL, 'http://purl.org/dc/elements/1.1/');
-		$pointerToVocab->addAttribute('rdf:resource','info:fedora/'.$vocab_terms[$i], 
+		$pointerToVocab->addAttribute('rdf:resource',$vocab_terms[$i], 
 'http://www.w3.org/1999/02/22-rdf-syntax-ns#');
 	
 		// add reference to measurement units being used for that column's data
@@ -368,7 +464,7 @@ function fba_solution_pack_measurement_create_RELS($headers, $vocab_terms, $unit
 
 
 /**
- * First attempt at generic risearch function.
+ * Generic risearch function.
  *
  * @param string $risearchstring
  *   actual string to be passed to risearch
