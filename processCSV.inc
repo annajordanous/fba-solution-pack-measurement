@@ -27,7 +27,8 @@ function fba_solution_pack_measurement(&$form_state = array()) {
 // Add a file upload file.
     $form['uploaded_file'] = array(
 		'#title' => 'UploadingCSV',
-		'#type' => 'file',
+		'#name'  => 'uploaded_file',
+		'#type'  => 'file',
 		'#description' => t('To validate a CSV file of data'),
     );
 // Add a submit button
@@ -208,7 +209,7 @@ function fba_solution_pack_measurement_check_filetype_uploaded()  {
 $_FILES['uploaded_file']['name']));
    	    $valid_CSV = false;
 	    } 
-	}
+	} 
     return $valid_CSV;
 }
 	
