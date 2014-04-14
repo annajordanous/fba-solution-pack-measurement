@@ -401,35 +401,41 @@ function fba_solution_pack_measurement_create_RELS($headers, $vocab_terms, $unit
 		xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#" 
 		xmlns:relsext="info:fedora/fedora-system:def/relations-external#" 
 		xmlns:altrelsext="http://www.fedora.info/definitions/1/0/fedora-relsext-ontology.rdfs#"
-		xmlns:dc="http://purl.org/dc/elements/1.1/"/>', NULL, FALSE, "http://www.w3.org/1999/02/22-rdf-syntax-ns#", TRUE);
+                xmlns:fedora-model="info:fedora/fedora-system:def/model#"
+		xmlns:dc="http://purl.org/dc/terms/"/>', NULL, FALSE, "http://www.w3.org/1999/02/22-rdf-syntax-ns#", TRUE);
 
     // This RDF file will have one RDF:description element, describing the CSV file.
     $desc = $returnedRDF->addChild('rdf:Description', NULL, 'http://www.w3.org/1999/02/22-rdf-syntax-ns#');
 
     $desc->addAttribute('rdf:about', $measurement_pid);
 
+    $dctype = $desc->addChild('dc:type', NULL, 'http://purl.org/dc/terms/');
+    $dctype->addAttribute('rdf:resource', 'dc:Dataset', 'http://www.w3.org/1999/02/22-rdf-syntax-ns#');
+    
+    $desc->addChild('dc:fileFormat', 'text/csv', 'http://purl.org/dc/terms/');
+    
     // Add metadata for each column of the CSV file, as individual Constituents of the CSV file
     for ($i = 0; $i < count($vocab_terms); $i++) {
 
         $constituent = $desc->addChild('relsext:hasConstituent', NULL, 'info:fedora/fedora-system:def/relations-external#');
         $constituent->addAttribute('rdf:parseType', "Resource", 'http://www.w3.org/1999/02/22-rdf-syntax-ns#');
 
+        // add link to the vocab term corresponding to that CSV column data
+        // (so the column dc:references that vocab term)
+        $pointerToVocab =
+                $constituent->addChild('dc:type', NULL, 'http://purl.org/dc/terms/');
+        $pointerToVocab->addAttribute('rdf:resource', $vocab_terms[$i], 'http://www.w3.org/1999/02/22-rdf-syntax-ns#');
+
         // column identifiers will be the CSV pid  with - and column number appended to the end
-        $constituent->addChild('dc:identifier', $measurement_pid . '-' . $i, 'http://purl.org/dc/elements/1.1/');
+        $constituent->addChild('dc:identifier', $measurement_pid . '-' . $i, 'http://purl.org/dc/terms/');
 
         // add the column header given in the first row of the CSV column
         // (to set the value describing the column - relsext:HasDescription) 
         $constituent->addChild('relsext:HasDescription', $headers[$i], 'info:fedora/fedora-system:def/relations-external#');
 
-        // add link to the vocab term corresponding to that CSV column data
-        // (so the column dc:references that vocab term)
-        $pointerToVocab =
-                $constituent->addChild('dc:references', NULL, 'http://purl.org/dc/elements/1.1/');
-        $pointerToVocab->addAttribute('rdf:resource', $vocab_terms[$i], 'http://www.w3.org/1999/02/22-rdf-syntax-ns#');
-
         // add reference to measurement units being used for that column's data
         // (as the dc:format of the data)
-        $constituent->addChild('dc:format', 'N/A', 'http://purl.org/dc/elements/1.1/'); //measurement units
+        $constituent->addChild('dc:format', $units, 'http://purl.org/dc/terms/'); //measurement units
         // data will be stored in RELSEXT as an RDF Seq object, i.e an ordered list
         // Each column of data will form one Subset of data for the CSV file
         $subset = $constituent->addChild('relsext:hasSubset', NULL, 'info:fedora/fedora-system:def/relations-external#');
@@ -440,7 +446,7 @@ function fba_solution_pack_measurement_create_RELS($headers, $vocab_terms, $unit
             $seq->addChild('rdf:li', $data_array[$j][$i], 'http://www.w3.org/1999/02/22-rdf-syntax-ns#');
         }
     }
-
+print_r($returnedRDF->asXML());
     return $returnedRDF->asXML();
 }
 
