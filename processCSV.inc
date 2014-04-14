@@ -435,7 +435,7 @@ function fba_solution_pack_measurement_create_RELS($headers, $vocab_terms, $unit
 
         // add reference to measurement units being used for that column's data
         // (as the dc:format of the data)
-        $constituent->addChild('dc:format', $units, 'http://purl.org/dc/terms/'); //measurement units
+        $constituent->addChild('dc:format', str($units), 'http://purl.org/dc/terms/'); //measurement units
         // data will be stored in RELSEXT as an RDF Seq object, i.e an ordered list
         // Each column of data will form one Subset of data for the CSV file
         $subset = $constituent->addChild('relsext:hasSubset', NULL, 'info:fedora/fedora-system:def/relations-external#');
@@ -446,6 +446,7 @@ function fba_solution_pack_measurement_create_RELS($headers, $vocab_terms, $unit
             $seq->addChild('rdf:li', $data_array[$j][$i], 'http://www.w3.org/1999/02/22-rdf-syntax-ns#');
         }
     }
+print_r('returned RDF: \n')
 print_r($returnedRDF->asXML());
     return $returnedRDF->asXML();
 }
