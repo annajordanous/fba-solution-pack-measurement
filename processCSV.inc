@@ -68,7 +68,7 @@ function fba_solution_pack_measurement_validate($form, &$form_state) {
             // Processing Second Row of CSV files (vocab terms)
             // Examine the second row and check if each entry in this row  is a DTC vocab term
             $vocab_terms = explode(",", strtok("\n"));
-            $vocab_terms = trim_array_values($vocab_terms);
+            $vocab_terms = fba_solution_pack_measurement_trim_array_values($vocab_terms);
             // NB TODO replace the use of explode() with fgetcsv (in case cells have commas in them)
 
             $invalid_vocab_term_found = false;
@@ -112,12 +112,12 @@ function fba_solution_pack_measurement_submit($form, &$form_state) {
     // Processing First Row of CSV file (user defined headers)
     // Extract to an array containing each header
     $headers = explode(",", strtok($file, "\n"));
-    $headers = trim_array_values($headers);
+    $headers = fba_solution_pack_measurement_trim_array_values($headers);
     // Processing Second Row of CSV files (vocab terms)
     // Extract to an array containing each vocab_term then convert to DTC vocab pid
     $vocab_terms = explode(",", strtok("\n"));
     // NB TODO replace the use of explode() with fgetcsv (in case cells have commas in them)
-    $vocab_terms = trim_array_values($vocab_terms);
+    $vocab_terms = fba_solution_pack_measurement_trim_array_values($vocab_terms);
 
     for ($i = 0, $j = count($vocab_terms); $i < $j; $i++) {
         $term = trim($vocab_terms[$i]);
@@ -129,8 +129,11 @@ function fba_solution_pack_measurement_submit($form, &$form_state) {
     // Processing Third Row of CSV files (measurement units)
     // Extract the third row information into an array
     $units = explode(",", strtok("\n"));
-    $units = trim_array_values($units);
-
+    $units = fba_solution_pack_measurement_trim_array_values($units);
+    foreach ($units as $key => $value) {
+        $units[$key] = fba_solution_pack_measurement_get_units($value);
+    }
+    
     // go through and extract the data into an array of arrays
     $current_row = explode(",", strtok("\n"));
     $data_array = array();
@@ -171,8 +174,8 @@ function fba_solution_pack_measurement_submit($form, &$form_state) {
     // 6. Generate RELS_EXT datastream - left out for now as this RELS_EXT is generated automatically for us by Tuque
 
     // ingest object
+    echo "Success. New object ingested into repository<br />";
     $object = $repository->ingestObject($new_measurement_object);
-echo "Finished ingesting object<br />";
 //var_dump($object);
 //echo "<br />";
 //$testpid = "vocab:1001";
@@ -186,7 +189,7 @@ echo "Finished ingesting object<br />";
 //print_r(' label '.$measurement_fedora_object->label);
 }
 
-function trim_array_values($array) {
+function fba_solution_pack_measurement_trim_array_values($array) {
     foreach ($array as $key => $value) {
         $array[$key] = trim($value);
     }
@@ -299,7 +302,7 @@ function fba_solution_pack_measurement_check_vocab_term(&$term) {
         // run the query to see if current term is a vocab term. 
         // NB $limit is set to 1 as we only want to check whether $term exists in the vocabulary or not
         // TUPLE query as we aren't interested in retrieving whole triples
-        $result = measurement_risearch($query, 'TUPLE', 1, 'Sparql');
+        $result = fba_solution_pack_measurement_risearch($query, 'TUPLE', 1, 'Sparql');
         $returnedURIs = fba_solution_pack_measurement_get_URI_from_Sparql_result($result);
         if (count($returnedURIs) <> 1) {
             // If at first the term isn't found, this could be because it 
@@ -315,7 +318,7 @@ function fba_solution_pack_measurement_check_vocab_term(&$term) {
 				}';
                 echo "&nbsp;&nbsp;Not finding \"$term\", trying it with capitalisation as $ucfirstterm. ";
                 // run the query to see if current term is a vocab term. 
-                $result = measurement_risearch($query, 'TUPLE', 1, 'Sparql');
+                $result = fba_solution_pack_measurement_risearch($query, 'TUPLE', 1, 'Sparql');
                 $returnedURIs = fba_solution_pack_measurement_get_URI_from_Sparql_result($result);
             }
             if (count($returnedURIs) <> 1) {
@@ -332,7 +335,7 @@ function fba_solution_pack_measurement_check_vocab_term(&$term) {
                 echo "&nbsp;&nbsp;Not finding \"$term\", trying a case insensitive search (slower). ";
 //print(htmlentities($query));	
                 // run the query to see if current term is a vocab term. 
-                $result = measurement_risearch($query, 'TUPLE', 1, 'Sparql');
+                $result = fba_solution_pack_measurement_risearch($query, 'TUPLE', 1, 'Sparql');
                 $returnedURIs = fba_solution_pack_measurement_get_URI_from_Sparql_result($result);
                 if (count($returnedURIs) <> 1) {
 
@@ -355,6 +358,29 @@ function fba_solution_pack_measurement_check_vocab_term(&$term) {
         }
     }
     return $vocab_pid;
+}
+
+/**
+ * check if the $unit parameter starts with the 'Units:' prefix
+ * (case insensitive)
+ *  If it does, strip off this prefix, trim off any whitespace 
+ *   surrounding the remaining string and return the result.
+ *  If it doesn't start with this prefix, trim off any whitespace
+ *   around the $unit parameter and return the result
+ *
+ * @param string $unit
+ *   the string being checked for the 'units: prefix
+ * @return string 
+ * 	return the trimmed string
+ */
+function fba_solution_pack_measurement_get_units(&$unit) {
+    // 
+    $prefix = strtolower(substr($unit, 0, 6));
+    if (ereg("^units:", $prefix)) {
+         return trim(substr($unit, 6));
+    } else {
+         return trim($unit);
+    }
 }
 
 function fba_solution_pack_measurement_setup_repository_connection() {
@@ -435,7 +461,7 @@ function fba_solution_pack_measurement_create_RELS($headers, $vocab_terms, $unit
 
         // add reference to measurement units being used for that column's data
         // (as the dc:format of the data)
-        $constituent->addChild('dc:format', str($units), 'http://purl.org/dc/terms/'); //measurement units
+        $constituent->addChild('dc:format', $units[$i], 'http://purl.org/dc/terms/'); //measurement units
         // data will be stored in RELSEXT as an RDF Seq object, i.e an ordered list
         // Each column of data will form one Subset of data for the CSV file
         $subset = $constituent->addChild('relsext:hasSubset', NULL, 'info:fedora/fedora-system:def/relations-external#');
@@ -446,8 +472,8 @@ function fba_solution_pack_measurement_create_RELS($headers, $vocab_terms, $unit
             $seq->addChild('rdf:li', $data_array[$j][$i], 'http://www.w3.org/1999/02/22-rdf-syntax-ns#');
         }
     }
-print_r('returned RDF: \n')
-print_r($returnedRDF->asXML());
+    // print_r('Returned RDF:');
+    // print_r(htmlentities($returnedRDF->asXML())); 
     return $returnedRDF->asXML();
 }
 
@@ -467,7 +493,7 @@ print_r($returnedRDF->asXML());
  * @return string
  *   raw search return values
  */
-function measurement_risearch($risearchstring, $type = 'TUPLE', $limit = 1000, $format) {
+function fba_solution_pack_measurement_risearch($risearchstring, $type = 'TUPLE', $limit = 1000, $format) {
     module_load_include('inc', 'fedora_repository', 'api/fedora_utils');
 //  $offset = 0;
 //  $limit = 1000;
