@@ -1,0 +1,36 @@
+<?xml version="1.0"?>
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+	xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#" 
+	xmlns:relsext="info:fedora/fedora-system:def/relations-external#" 
+	xmlns:altrelsext="http://www.fedora.info/definitions/1/0/fedora-relsext-ontology.rdfs#"
+	xmlns:dc="http://purl.org/dc/terms/" 
+	xmlns:fedora-model="info:fedora/fedora-system:def/model#"
+
+	<rdf:Description rdf:about="info:fedora/dtc:123">
+		<dc:type rdf:resource="dc:Dataset"/>
+		<dc:fileFormat>text/csv</dc:fileFormat>
+		
+		<relsext:hasConstituent rdf:parseType="Resource">
+		
+			<dc:type rdf:resource="info:fedora/vocab:1111"/>
+			<dc:identifier>1</dc:identifier>
+			<relsext:HasDescription>Year</relsext:HasDescription>
+			<dc:format>N/A</dc:format>
+		
+			<relsext:hasSubset>
+				<rdf:Seq>
+					<rdf:li>2007</rdf:li>     
+					<rdf:li>2008</rdf:li>		
+					<rdf:li>2009</rdf:li>		
+					<rdf:li>2010</rdf:li>
+					<rdf:li>2011</rdf:li>
+					<rdf:li>2012</rdf:li>
+					<rdf:li>2013</rdf:li>
+				</rdf:Seq>
+			</relsext:hasSubset>
+		</relsext:hasConstituent>    
+
+
+	</rdf:Description>
+
+</rdf:RDF>
